@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Car Game with Pixi.js</title>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.2.4/pixi.min.js"></script>
+    <script>
+
+const app = new PIXI.Application({
+    width: 800,  // width of the canvas
+    height: 600, // height of the canvas
+    backgroundColor: 0x1099bb // background color
+});
+
+// Append the PixiJS canvas to the HTML document
+document.body.appendChild(app.view);
+
+// Create a basic graphic object (a rectangle)
+const rectangle = new PIXI.Graphics();
+rectangle.beginFill(0xde3249);
+rectangle.drawRect(50, 50, 100, 100);
+rectangle.endFill();
+
+// Add the rectangle to the PixiJS stage
+app.stage.addChild(rectangle);
+        
+    </script>
+</body>
+</html>
