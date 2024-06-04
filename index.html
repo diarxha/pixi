@@ -11,40 +11,43 @@
 <body>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.2.4/pixi.min.js"></script>
     <script>
+        // Create a Pixi.js application
+        const app = new PIXI.Application({
+            width: 800, // width of the canvas
+            height: 600, // height of the canvas
+        });
+        document.body.appendChild(app.view);
 
-// Create a Pixi.js application
-const app = new PIXI.Application({
-    width: 800, // width of the canvas
-    height: 600, // height of the canvas
-});
-document.body.appendChild(app.view);
+        // Load the background image
+        PIXI.Loader.shared
+            .add('background', 'road.png') // Ensure the path is correct
+            .add('car', 'car.png') // Ensure the path is correct
+            .load((loader, resources) => {
+                console.log('Resources loaded:', resources);
+                setup(resources);
+            })
+            .onError.add((error) => {
+                console.error('Error loading resources:', error);
+            });
 
-// Load the background image
-PIXI.Loader.shared
-    .add('background', 'road.png') // Ensure the path is correct
-    .add('car', 'car.png') // Ensure the path is correct
-    .load((loader, resources) => {
-        setup(resources);
-    })
-    .onError.add((error) => {
-        console.error('Error loading resources:', error);
-    });
+        // Set up the background image once it is loaded
+        function setup(resources) {
+            console.log('Setting up sprites...');
+            const background = new PIXI.Sprite(resources.background.texture);
+            background.width = app.screen.width;
+            background.height = app.screen.height;
+            app.stage.addChild(background);
+            console.log('Background added to stage');
 
-// Set up the background image once it is loaded
-function setup(resources) {
-    const background = new PIXI.Sprite(resources['background'].texture);
-    background.width = app.screen.width;
-    background.height = app.screen.height;
-    app.stage.addChild(background);
-
-    // Car setup
-    const car = new PIXI.Sprite(resources['car'].texture);
-    car.width = 100; // Set the car width
-    car.height = 50; // Set the car height
-    car.x = app.screen.width / 2 - car.width / 2; // Center the car horizontally
-    car.y = app.screen.height - car.height - 20; // Position the car near the bottom of the screen
-    app.stage.addChild(car);
-}
+            // Car setup
+            const car = new PIXI.Sprite(resources.car.texture);
+            car.width = 100; // Set the car width
+            car.height = 50; // Set the car height
+            car.x = app.screen.width / 2 - car.width / 2; // Center the car horizontally
+            car.y = app.screen.height - car.height - 20; // Position the car near the bottom of the screen
+            app.stage.addChild(car);
+            console.log('Car added to stage');
+        }
     </script>
 </body>
 </html>
