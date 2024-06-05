@@ -20,6 +20,14 @@
             font-size: 24px;
             z-index: 1;
         }
+        #highScore {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            color: white;
+            font-size: 24px;
+            z-index: 1;
+        }
         #restart {
             position: absolute;
             top: 60px;
@@ -36,7 +44,7 @@
     <button id="restart" onclick="restartGame()">Restart</button>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.2.1/pixi.min.js"></script>
     <script>
-        let app, car, enemyCars = [], gameActive = true, score = 0, scoreElement, restartButton, scoreInterval;
+        let app, car, enemyCars = [], gameActive = true, score = 0, highScore = 0, scoreElement, highScoreElement, restartButton, scoreInterval;
 
         // Initialize the Pixi Application
         function setup() {
