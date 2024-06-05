@@ -2,52 +2,66 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Car Game with Pixi.js</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixi.js Canvas Background and Car Sprite</title>
     <style>
-        body { margin: 0; }
-        canvas { display: block; }
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
     </style>
 </head>
 <body>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.2.4/pixi.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.2.1/pixi.min.js"></script>
     <script>
-        // Create a Pixi.js application
-        const app = new PIXI.Application({
-            width: 800, // width of the canvas
-            height: 600, // height of the canvas
-        });
+        // Initialize the Pixi Application
+        const app = new PIXI.Application({ width: 800, height: 600 });
         document.body.appendChild(app.view);
 
-        // Load the background image
-        PIXI.Loader.shared
-            .add('background', 'road.png') // Ensure the path is correct
-            .add('car', 'car.png') // Ensure the path is correct
-            .load((loader, resources) => {
-                console.log('Resources loaded:', resources);
-                setup(resources);
-            })
-            .onError.add((error) => {
-                console.error('Error loading resources:', error);
-            });
+        // Draw the road
+        const road = new PIXI.Graphics();
+        road.beginFill(0x333333); // Road color
+        road.drawRect(100, 0, 600, 600); // Road dimensions
+        road.endFill();
 
-        // Set up the background image once it is loaded
-        function setup(resources) {
-            console.log('Setting up sprites...');
-            const background = new PIXI.Sprite(resources.background.texture);
-            background.width = app.screen.width;
-            background.height = app.screen.height;
-            app.stage.addChild(background);
-            console.log('Background added to stage');
+        // Draw the lane markings
+        const laneMarkings = new PIXI.Graphics();
+        laneMarkings.lineStyle(4, 0xFFFFFF, 1);
 
-            // Car setup
-            const car = new PIXI.Sprite(resources.car.texture);
-            car.width = 100; // Set the car width
-            car.height = 50; // Set the car height
-            car.x = app.screen.width / 2 - car.width / 2; // Center the car horizontally
-            car.y = app.screen.height - car.height - 20; // Position the car near the bottom of the screen
-            app.stage.addChild(car);
-            console.log('Car added to stage');
+        // Calculate lane width and positions
+        const laneWidth = 600 / 4; // Four lanes
+        const startX = 100;
+
+        // Draw lane markings for four lanes
+        for (let i = 0; i < 600; i += 40) {
+            for (let j = 1; j < 4; j++) { // Three lines to separate four lanes
+                laneMarkings.moveTo(startX + j * laneWidth, i);
+                laneMarkings.lineTo(startX + j * laneWidth, i + 20);
+            }
         }
+
+        // Add road and lane markings to the stage
+        app.stage.addChild(road);
+        app.stage.addChild(laneMarkings);
+
+        // Create a car sprite
+        const car = new PIXI.Graphics();
+        car.beginFill(0xFF0000); // Car color
+        car.drawRect(0, 0, 50, 100); // Car dimensions
+        car.endFill();
+        car.x = app.screen.width / 2 - 25; // Center horizontally
+        car.y = app.screen.height - 150; // Position in the lower half
+
+        // Add the car to the stage
+        app.stage.addChild(car);
+
+        // Animate the lane markings to simulate a moving road
+        app.ticker.add(() => {
+            laneMarkings.y += 2;
+            if (laneMarkings.y > 40) {
+                laneMarkings.y = 0;
+            }
+        });
     </script>
 </body>
 </html>
