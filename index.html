@@ -12,6 +12,10 @@
         canvas {
             background-color: #333333; /* Added background color to the canvas */
         }
+        @font-face {
+            font-family: myFont;
+            src: url(/font/TechnoRaceItalic-eZRWe.otf);
+            }
         #score {
             position: absolute;
             top: 20px;
@@ -19,6 +23,7 @@
             color: white;
             font-size: 24px;
             z-index: 1;
+            font-family: myFont;
         }
         #highScore {
             position: absolute;
@@ -27,195 +32,217 @@
             color: white;
             font-size: 24px;
             z-index: 1;
+            font-family: myFont;
         }
         #restart {
             position: absolute;
-            top: 60px;
+            top: 100px;
             left: 20px;
             font-size: 20px;
             padding: 10px 20px;
             display: none;
             z-index: 1;
+            font-family: myFont;
         }
     </style>
 </head>
 <body>
     <div id="score">Score: 0</div>
+    <div id="highScore">High Score: 0</div>
     <button id="restart" onclick="restartGame()">Restart</button>
+    <audio id="backgroundMusic" src="/audio/bgmusic.mp3" loop></audio>
+    <audio id="crashSound" src="audio/crash-sound.mp3"></audio>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.2.1/pixi.min.js"></script>
     <script>
-        let app, car, enemyCars = [], gameActive = true, score = 0, highScore = 0, scoreElement, highScoreElement, restartButton, scoreInterval;
+        let app, car, enemyCars = [], gameActive = true, score = 0, highScore = 0, scoreElement, highScoreElement, restartButton, scoreInterval, backgroundMusic, crashSound;
 
-        // Initialize the Pixi Application
-        function setup() {
-            app = new PIXI.Application({ width: 800, height: 1000 });
-            document.body.appendChild(app.view);
+function setup() {
+    app = new PIXI.Application({ width: 800, height: 1000 });
+    document.body.appendChild(app.view);
 
-            // Draw the road
-            const road = new PIXI.Graphics();
-            road.beginFill(0x333333); // Road color
-            road.drawRect(100, 0, 600, 1000); // Adjusted road dimensions
-            road.endFill();
-            app.stage.addChild(road); // Add road to the stage first
+    // Draw the road
+    const road = new PIXI.Graphics();
+    road.beginFill(0x333333); // Road color
+    road.drawRect(100, 0, 600, 1000); // Adjusted road dimensions
+    road.endFill();
+    app.stage.addChild(road); // Add road to the stage first
 
-            // Draw the lane markings
-            const laneMarkings = new PIXI.Graphics();
-            laneMarkings.lineStyle(4, 0xFFFFFF, 1);
+    // Draw the lane markings
+    const laneMarkings = new PIXI.Graphics();
+    laneMarkings.lineStyle(4, 0xFFFFFF, 1);
 
-            // Calculate lane width and positions
-            const laneWidth = 600 / 4; // Four lanes
-            const startX = 100;
+    // Calculate lane width and positions
+    const laneWidth = 600 / 4; // Four lanes
+    const startX = 100;
 
-            // Draw lane markings for four lanes
-            for (let i = 0; i < 1000; i += 40) { // Adjusted loop to match new height
-                for (let j = 1; j < 4; j++) { // Three lines to separate four lanes
-                    laneMarkings.moveTo(startX + j * laneWidth, i);
-                    laneMarkings.lineTo(startX + j * laneWidth, i + 20);
-                }
+    // Draw lane markings for four lanes
+    for (let i = 0; i < 1000; i += 40) { // Adjusted loop to match new height
+        for (let j = 1; j < 4; j++) { // Three lines to separate four lanes
+            laneMarkings.moveTo(startX + j * laneWidth, i);
+            laneMarkings.lineTo(startX + j * laneWidth, i + 20);
+        }
+    }
+    app.stage.addChild(laneMarkings); // Add lane markings to the stage
+
+    // Load the car images
+    const carTexture = PIXI.Texture.from('img/car.png');
+    const car2Texture = PIXI.Texture.from('img/car2.png');
+
+    // Create the player car sprite
+    car = new PIXI.Sprite(carTexture);
+    car.width = 150;
+    car.height = 150;
+    car.x = app.screen.width / 2 - car.width / 2; // Center horizontally
+    car.y = app.screen.height - car.height - 50; // Position in the lower half
+    app.stage.addChild(car);
+
+    // Array to hold the enemy cars
+    enemyCars = [];
+
+    // Function to spawn enemy cars
+    function spawnEnemyCar() {
+        if (!gameActive) return;
+        const lane = Math.floor(Math.random() * 4); // Random lane (0 to 3)
+        const enemyCar = new PIXI.Sprite(car2Texture);
+        enemyCar.width = 150;
+        enemyCar.height = 150;
+        enemyCar.x = startX + lane * laneWidth + (laneWidth - enemyCar.width) / 2; // Center in lane
+        enemyCar.y = -enemyCar.height; // Start above the screen
+        app.stage.addChild(enemyCar);
+        enemyCars.push(enemyCar);
+    }
+
+    // Spawn enemy cars at random intervals
+    setInterval(spawnEnemyCar, 1000); // Spawn every second
+
+    // Keyboard controls
+    const keys = {};
+    window.addEventListener('keydown', (e) => {
+        keys[e.code] = true;
+    });
+    window.addEventListener('keyup', (e) => {
+        keys[e.code] = false;
+    });
+
+    // Collision detection function
+    function checkCollision(rect1, rect2) {
+        const horizontalPadding = 40; // Adjust horizontal padding
+        const verticalPadding = 7; // Adjust vertical padding
+        return rect1.x + horizontalPadding < rect2.x + rect2.width - horizontalPadding &&
+            rect1.x + rect1.width - horizontalPadding > rect2.x + horizontalPadding &&
+            rect1.y + verticalPadding < rect2.y + rect2.height - verticalPadding &&
+            rect1.y + rect1.height - verticalPadding > rect2.y + verticalPadding;
+    }
+
+    // Game loop
+    app.ticker.add(() => {
+        if (!gameActive) return;
+
+        // Move player car
+        if (keys['ArrowLeft'] || keys['KeyA']) {
+            car.x -= 5;
+            if (car.x < 100) {
+                car.x = 100; // Keep the car within the left boundary
             }
-            app.stage.addChild(laneMarkings); // Add lane markings to the stage
-
-            // Load the car images
-            const carTexture = PIXI.Texture.from('img/car.png');
-            const car2Texture = PIXI.Texture.from('img/car2.png');
-
-            // Create the player car sprite
-            car = new PIXI.Sprite(carTexture);
-            car.width = 150;
-            car.height = 150;
-            car.x = app.screen.width / 2 - car.width / 2; // Center horizontally
-            car.y = app.screen.height - car.height - 50; // Position in the lower half
-            app.stage.addChild(car);
-
-            // Array to hold the enemy cars
-            enemyCars = [];
-
-            // Function to spawn enemy cars
-            function spawnEnemyCar() {
-                if (!gameActive) return;
-                const lane = Math.floor(Math.random() * 4); // Random lane (0 to 3)
-                const enemyCar = new PIXI.Sprite(car2Texture);
-                enemyCar.width = 150;
-                enemyCar.height = 150;
-                enemyCar.x = startX + lane * laneWidth + (laneWidth - enemyCar.width) / 2; // Center in lane
-                enemyCar.y = -enemyCar.height; // Start above the screen
-                app.stage.addChild(enemyCar);
-                enemyCars.push(enemyCar);
+        }
+        if (keys['ArrowRight'] || keys['KeyD']) {
+            car.x += 5;
+            if (car.x > app.screen.width - car.width - 100) {
+                car.x = app.screen.width - car.width - 100; // Keep the car within the right boundary
             }
-
-            // Spawn enemy cars at random intervals
-            setInterval(spawnEnemyCar, 1000); // Spawn every second
-
-            // Keyboard controls
-            const keys = {};
-            window.addEventListener('keydown', (e) => {
-                keys[e.code] = true;
-            });
-            window.addEventListener('keyup', (e) => {
-                keys[e.code] = false;
-            });
-
-            // Collision detection function
-            function checkCollision(rect1, rect2) {
-                const horizontalPadding = 45; // Adjust horizontal padding
-                const verticalPadding = 7; // Adjust vertical padding
-                return rect1.x + horizontalPadding < rect2.x + rect2.width - horizontalPadding &&
-                    rect1.x + rect1.width - horizontalPadding > rect2.x + horizontalPadding &&
-                    rect1.y + verticalPadding < rect2.y + rect2.height - verticalPadding &&
-                    rect1.y + rect1.height - verticalPadding > rect2.y + verticalPadding;
+        }
+        if (keys['ArrowUp'] || keys['KeyW']) {
+            car.y -= 5;
+            if (car.y < 0) {
+                car.y = 0; // Keep the car within the upper boundary
             }
-
-            // Game loop
-            app.ticker.add(() => {
-                if (!gameActive) return;
-
-                // Move player car
-                if (keys['ArrowLeft'] || keys['KeyA']) {
-                    car.x -= 5;
-                    if (car.x < 100) {
-                        car.x = 100; // Keep the car within the left boundary
-                    }
-                }
-                if (keys['ArrowRight'] || keys['KeyD']) {
-                    car.x += 5;
-                    if (car.x > app.screen.width - car.width - 100) {
-                        car.x = app.screen.width - car.width - 100; // Keep the car within the right boundary
-                    }
-                }
-                if (keys['ArrowUp'] || keys['KeyW']) {
-                    car.y -= 5;
-                    if (car.y < 0) {
-                        car.y = 0; // Keep the car within the upper boundary
-                    }
-                }
-                if (keys['ArrowDown'] || keys['KeyS']) {
-                    car.y += 5;
-                    if (car.y > app.screen.height - car.height) {
-                        car.y = app.screen.height - car.height; // Keep the car within the lower boundary
-                    }
-                }
-
-                // Move enemy cars
-                for (let i = enemyCars.length - 1; i >= 0; i--) {
-                    const enemyCar = enemyCars[i];
-                    enemyCar.y += 5; // Move down
-                    if (enemyCar.y > app.screen.height) {
-                        app.stage.removeChild(enemyCar); // Remove from stage
-                        enemyCars.splice(i, 1); // Remove from array
-                    } else if (checkCollision(car, enemyCar)) {
-                        gameActive = false; // Stop the game
-                        clearInterval(scoreInterval); // Stop the score counter
-                        restartButton.style.display = 'block'; // Show restart button
-                        return;
-                    }
-                }
-
-                // Animate the lane markings to simulate a moving road
-                laneMarkings.y += 2;
-                if (laneMarkings.y > 40) {
-                    laneMarkings.y = 0;
-                }
-            });
+        }
+        if (keys['ArrowDown'] || keys['KeyS']) {
+            car.y += 5;
+            if (car.y > app.screen.height - car.height) {
+                car.y = app.screen.height - car.height; // Keep the car within the lower boundary
+            }
         }
 
-        // Initialize game
-        window.onload = () => {
-            scoreElement = document.getElementById('score');
-            restartButton = document.getElementById('restart');
-            setup();
-
-            // Update score every second
-            scoreInterval = setInterval(() => {
-                if (gameActive) {
-                    score += 10;
-                    scoreElement.textContent = `Score: ${score}`;
+        // Move enemy cars
+        for (let i = enemyCars.length - 1; i >= 0; i--) {
+            const enemyCar = enemyCars[i];
+            enemyCar.y += 5; // Move down
+            if (enemyCar.y > app.screen.height) {
+                app.stage.removeChild(enemyCar); // Remove from stage
+                enemyCars.splice(i, 1); // Remove from array
+            } else if (checkCollision(car, enemyCar)) {
+                gameActive = false; // Stop the game
+                backgroundMusic.pause(); // Stop the background music
+                crashSound.play(); // Play crash sound
+                clearInterval(scoreInterval); // Stop the score counter
+                restartButton.style.display = 'block'; // Show restart button
+                // Update high score
+                if (score > highScore) {
+                    highScore = score;
+                    highScoreElement.textContent = `High Score: ${highScore}`;
                 }
-            }, 1000);
+                return;
+            }
         }
 
-        // Restart game function
-        function restartGame() {
-            gameActive = true;
-            score = 0;
+        // Animate the lane markings to simulate a moving road
+        laneMarkings.y += 2;
+        if (laneMarkings.y > 40) {
+            laneMarkings.y = 0;
+        }
+    });
+}
+
+// Initialize game
+window.onload = () => {
+    scoreElement = document.getElementById('score');
+    highScoreElement = document.getElementById('highScore');
+    restartButton = document.getElementById('restart');
+    backgroundMusic = document.getElementById('backgroundMusic'); // Get the background music audio element
+    crashSound = document.getElementById('crashSound'); // Get the crash sound audio element
+    setup();
+
+    // Start the background music
+    backgroundMusic.play();
+
+    // Update score every second
+    scoreInterval = setInterval(() => {
+        if (gameActive) {
+            score += 10;
             scoreElement.textContent = `Score: ${score}`;
-            restartButton.style.display = 'none';
-
-            // Remove existing enemy cars
-            enemyCars.forEach(enemyCar => app.stage.removeChild(enemyCar));
-            enemyCars = [];
-
-            // Reset player car position
-            car.x = app.screen.width / 2 - car.width / 2;
-            car.y = app.screen.height - car.height - 50;
-
-            // Start the score interval again
-            scoreInterval = setInterval(() => {
-                if (gameActive) {
-                    score += 10;
-                    scoreElement.textContent = `Score: ${score}`;
-                }
-            }, 1000);
         }
+    }, 1000);
+}
+
+// Restart game function
+function restartGame() {
+    gameActive = true;
+    score = 0;
+    scoreElement.textContent = `Score: ${score}`;
+    restartButton.style.display = 'none';
+
+    // Remove existing enemy cars
+    enemyCars.forEach(enemyCar => app.stage.removeChild(enemyCar));
+    enemyCars = [];
+
+    // Reset player car position
+    car.x = app.screen.width / 2 - car.width / 2;
+    car.y = app.screen.height - car.height - 50;
+
+    // Start the background music
+    backgroundMusic.play();
+
+    // Start the score interval again
+    scoreInterval = setInterval(() => {
+        if (gameActive) {
+            score += 10;
+            scoreElement.textContent = `Score: ${score}`;
+        }
+    }, 1000);
+}
+
+
     </script>
 </body>
 </html>
