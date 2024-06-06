@@ -15,46 +15,52 @@
         @font-face {
             font-family: myFont;
             src: url(/font/TechnoRaceItalic-eZRWe.otf);
-            }
-        #score {
+        }
+        #score, #highScore {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            color: white;
-            font-size: 24px;
-            z-index: 1;
+            top: 3px;
             font-family: myFont;
+            left: 45%;
+            font-size: 24px;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
         }
         #highScore {
-            position: absolute;
-            top: 60px;
-            left: 20px;
-            color: white;
-            font-size: 24px;
-            z-index: 1;
-            font-family: myFont;
+            top: 50px;
         }
-        #restart {
+        #start, #restart {
+            font-family: myFont;
             position: absolute;
-            top: 100px;
-            left: 20px;
+            left: 45%;
             font-size: 20px;
             padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #start {
+            top: 98px;
+        }
+        #restart {
+            top: 140px;
             display: none;
-            z-index: 1;
-            font-family: myFont;
         }
     </style>
 </head>
 <body>
     <div id="score">Score: 0</div>
     <div id="highScore">High Score: 0</div>
-    <button id="restart" onclick="restartGame()">Restart</button>
+    <button id="start" onclick="startGame()">Start Game</button>
+    <button id="restart" onclick="restartGame()" style="display:none;">Restart</button>
     <audio id="backgroundMusic" src="/audio/bgmusic.mp3" loop></audio>
     <audio id="crashSound" src="audio/crash-sound.mp3"></audio>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.2.1/pixi.min.js"></script>
     <script>
-        let app, car, enemyCars = [], gameActive = true, score = 0, highScore = 0, scoreElement, highScoreElement, restartButton, scoreInterval, backgroundMusic, crashSound;
+        let app, car, enemyCars = [], gameActive = false, score = 0, highScore = 0, scoreElement, highScoreElement, startButton, restartButton, scoreInterval, backgroundMusic, crashSound;
 
 function setup() {
     app = new PIXI.Application({ width: 800, height: 1000 });
@@ -198,15 +204,25 @@ function setup() {
 window.onload = () => {
     scoreElement = document.getElementById('score');
     highScoreElement = document.getElementById('highScore');
+    startButton = document.getElementById('start');
     restartButton = document.getElementById('restart');
     backgroundMusic = document.getElementById('backgroundMusic'); // Get the background music audio element
     crashSound = document.getElementById('crashSound'); // Get the crash sound audio element
     setup();
+}
+
+// Start game function
+function startGame() {
+    gameActive = true;
+    score = 0;
+    scoreElement.textContent = `Score: ${score}`;
+    startButton.style.display = 'none';
+    restartButton.style.display = 'none';
 
     // Start the background music
     backgroundMusic.play();
 
-    // Update score every second
+    // Start the score interval
     scoreInterval = setInterval(() => {
         if (gameActive) {
             score += 10;
@@ -241,6 +257,7 @@ function restartGame() {
         }
     }, 1000);
 }
+
 
 
     </script>
