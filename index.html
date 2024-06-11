@@ -16,24 +16,29 @@
             font-family: myFont;
             src: url(/font/TechnoRaceItalic-eZRWe.otf);
         }
-        #score, #highScore {
+        #score, #highScore, #fuelGauge {
             position: absolute;
             top: 3px;
             font-family: myFont;
-            left: 45%;
             font-size: 24px;
             color: white;
             background-color: rgba(0, 0, 0, 0.7);
             padding: 10px;
             border-radius: 5px;
+            right: 50%;
         }
         #highScore {
             top: 50px;
+            right: 50%;
+        }
+        #fuelGauge {
+            top: 97px;
+            right: 50%;
         }
         #start, #restart {
             font-family: myFont;
             position: absolute;
-            left: 45%;
+            right: 50%;
             font-size: 20px;
             padding: 10px 20px;
             background-color: #4CAF50;
@@ -43,24 +48,32 @@
             cursor: pointer;
         }
         #start {
-            top: 98px;
+            top: 150px;
         }
         #restart {
-            top: 140px;
+            top: 192px;
             display: none;
+        }
+        #speedSlider {
+            position: absolute;
+            right: 47%;
+            top: 234px;
+            width: 200px;
         }
     </style>
 </head>
 <body>
     <div id="score">Score: 0</div>
     <div id="highScore">High Score: 0</div>
+    <div id="fuelGauge">Fuel: 100%</div>
     <button id="start" onclick="startGame()">Start Game</button>
     <button id="restart" onclick="restartGame()" style="display:none;">Restart</button>
+    <input type="range" id="speedSlider" min="1" max="10" value="5" oninput="updateSpeed()">
     <audio id="backgroundMusic" src="/audio/bgmusic.mp3" loop></audio>
     <audio id="crashSound" src="audio/crash-sound.mp3"></audio>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.2.1/pixi.min.js"></script>
     <script>
-        let app, car, enemyCars = [], gameActive = false, score = 0, highScore = 0, scoreElement, highScoreElement, startButton, restartButton, scoreInterval, backgroundMusic, crashSound, speedMultiplier = 1;
+        let app, car, enemyCars = [], fuelCanisters = [], gameActive = false, score = 0, highScore = 0, fuel = 100, scoreElement, highScoreElement, fuelGaugeElement, startButton, restartButton, speedSlider, backgroundMusic, crashSound, speedMultiplier = 1, carSpeed = 5;
 
         function setup() {
             app = new PIXI.Application({ width: 800, height: 1000 });
@@ -93,6 +106,7 @@
             // Load the car images
             const carTexture = PIXI.Texture.from('img/car.png');
             const car2Texture = PIXI.Texture.from('img/car2.png');
+            const fuelTexture = PIXI.Texture.from('img/fuel.png'); // Load fuel image
 
             // Create the player car sprite
             car = new PIXI.Sprite(carTexture);
@@ -104,6 +118,9 @@
 
             // Array to hold the enemy cars
             enemyCars = [];
+
+            // Array to hold the fuel canisters
+            fuelCanisters = [];
 
             // Function to spawn enemy cars
             function spawnEnemyCar() {
@@ -118,8 +135,24 @@
                 enemyCars.push(enemyCar);
             }
 
+            // Function to spawn fuel canisters
+            function spawnFuelCanister() {
+                if (!gameActive) return;
+                const lane = Math.floor(Math.random() * 4); // Random lane (0 to 3)
+                const fuelCanister = new PIXI.Sprite(fuelTexture);
+                fuelCanister.width = 50;
+                fuelCanister.height = 50;
+                fuelCanister.x = startX + lane * laneWidth + (laneWidth - fuelCanister.width) / 2; // Center in lane
+                fuelCanister.y = -fuelCanister.height; // Start above the screen
+                app.stage.addChild(fuelCanister);
+                fuelCanisters.push(fuelCanister);
+            }
+
             // Spawn enemy cars at random intervals
             setInterval(spawnEnemyCar, 1000); // Spawn every second
+
+            // Spawn fuel canisters at random intervals
+            setInterval(spawnFuelCanister, 5000); // Spawn every 5 seconds
 
             // Keyboard controls
             const keys = {};
@@ -146,25 +179,25 @@
 
                 // Move player car
                 if (keys['ArrowLeft'] || keys['KeyA']) {
-                    car.x -= 5;
+                    car.x -= carSpeed;
                     if (car.x < 100) {
                         car.x = 100; // Keep the car within the left boundary
                     }
                 }
                 if (keys['ArrowRight'] || keys['KeyD']) {
-                    car.x += 5;
+                    car.x += carSpeed;
                     if (car.x > app.screen.width - car.width - 100) {
                         car.x = app.screen.width - car.width - 100; // Keep the car within the right boundary
                     }
                 }
                 if (keys['ArrowUp'] || keys['KeyW']) {
-                    car.y -= 5;
+                    car.y -= carSpeed;
                     if (car.y < 0) {
                         car.y = 0; // Keep the car within the upper boundary
                     }
                 }
                 if (keys['ArrowDown'] || keys['KeyS']) {
-                    car.y += 5;
+                    car.y += carSpeed;
                     if (car.y > app.screen.height - car.height) {
                         car.y = app.screen.height - car.height; // Keep the car within the lower boundary
                     }
@@ -182,6 +215,7 @@
                         backgroundMusic.pause(); // Stop the background music
                         crashSound.play(); // Play crash sound
                         clearInterval(scoreInterval); // Stop the score counter
+                        clearInterval(fuelInterval); // Stop the fuel counter
                         restartButton.style.display = 'block'; // Show restart button
                         // Update high score
                         if (score > highScore) {
@@ -192,11 +226,24 @@
                     }
                 }
 
+                // Move fuel canisters
+                for (let i = fuelCanisters.length - 1; i >= 0; i--) {
+                    const fuelCanister = fuelCanisters[i];
+                    fuelCanister.y += 5 * speedMultiplier; // Move down with speed multiplier
+                    if (fuelCanister.y > app.screen.height) {
+                        app.stage.removeChild(fuelCanister); // Remove from stage
+                        fuelCanisters.splice(i, 1); // Remove from array
+                    } else if (checkCollision(car, fuelCanister)) {
+                        app.stage.removeChild(fuelCanister); // Remove from stage
+                        fuelCanisters.splice(i, 1); // Remove from array
+                        fuel = Math.min(100, fuel + 20); // Increase fuel, max 100%
+                        fuelGaugeElement.textContent = `Fuel: ${fuel}%`;
+                    }
+                }
+
                 // Adjust speed multiplier based on score
-                if (score >= 500) {
-                    speedMultiplier = 1 + Math.floor((score - 100) / 500);
-                } else if (score >= 100) {
-                    speedMultiplier = 2;
+                if (score >= 100) {
+                    speedMultiplier = 1 + ((score - 100) / 500) * 0.5 + 0.5;
                 } else {
                     speedMultiplier = 1;
                 }
@@ -213,19 +260,28 @@
         window.onload = () => {
             scoreElement = document.getElementById('score');
             highScoreElement = document.getElementById('highScore');
+            fuelGaugeElement = document.getElementById('fuelGauge');
             startButton = document.getElementById('start');
             restartButton = document.getElementById('restart');
+            speedSlider = document.getElementById('speedSlider'); // Get the speed slider element
             backgroundMusic = document.getElementById('backgroundMusic'); // Get the background music audio element
             crashSound = document.getElementById('crashSound'); // Get the crash sound audio element
             setup();
+        }
+
+        // Update car speed function
+        function updateSpeed() {
+            carSpeed = parseInt(speedSlider.value, 10);
         }
 
         // Start game function
         function startGame() {
             gameActive = true;
             score = 0;
+            fuel = 100; // Reset fuel at the start of the game
             speedMultiplier = 1; // Reset speed multiplier at the start of the game
             scoreElement.textContent = `Score: ${score}`;
+            fuelGaugeElement.textContent = `Fuel: ${fuel}%`;
             startButton.style.display = 'none';
             restartButton.style.display = 'none';
 
@@ -239,19 +295,49 @@
                     scoreElement.textContent = `Score: ${score}`;
                 }
             }, 1000);
+
+            // Start the fuel interval
+            fuelInterval = setInterval(() => {
+                if (gameActive) {
+                    // Decrease fuel by 2% per second until score reaches 500, then by 3% per second
+                    const fuelDecrement = score < 500 ? 2 : 3;
+                    fuel -= fuelDecrement;
+                    fuelGaugeElement.textContent = `Fuel: ${fuel}%`;
+                    if (fuel <= 0) {
+                        gameActive = false;
+                        backgroundMusic.pause(); // Stop the background music
+                        clearInterval(scoreInterval); // Stop the score counter
+                        clearInterval(fuelInterval); // Stop the fuel counter
+                        restartButton.style.display = 'block'; // Show restart button
+                        crashSound.play(); // Play crash sound
+                        // Update high score
+                        if (score > highScore) {
+                            highScore = score;
+                            highScoreElement.textContent = `High Score: ${highScore}`;
+                        }
+                        return;
+                    }
+                }
+            }, 1000);
         }
 
         // Restart game function
         function restartGame() {
             gameActive = true;
             score = 0;
+            fuel = 100; // Reset fuel on restart
             speedMultiplier = 1; // Reset speed multiplier on restart
             scoreElement.textContent = `Score: ${score}`;
+            fuelGaugeElement.textContent = `Fuel: ${fuel}%`;
             restartButton.style.display = 'none';
 
             // Remove existing enemy cars
             enemyCars.forEach(enemyCar => app.stage.removeChild(enemyCar));
             enemyCars = [];
+
+            // Remove existing fuel canisters
+            fuelCanisters.forEach(fuelCanister => app.stage.removeChild(fuelCanister));
+            fuelCanisters = [];
 
             // Reset player car position
             car.x = app.screen.width / 2 - car.width / 2;
@@ -265,6 +351,30 @@
                 if (gameActive) {
                     score += 10;
                     scoreElement.textContent = `Score: ${score}`;
+                }
+            }, 1000);
+
+            // Start the fuel interval again
+            fuelInterval = setInterval(() => {
+                if (gameActive) {
+                    // Decrease fuel by 2% per second until score reaches 500, then by 3% per second
+                    const fuelDecrement = score < 500 ? 2 : 3;
+                    fuel -= fuelDecrement;
+                    fuelGaugeElement.textContent = `Fuel: ${fuel}%`;
+                    if (fuel <= 0) {
+                        gameActive = false;
+                        backgroundMusic.pause(); // Stop the background music
+                        clearInterval(scoreInterval); // Stop the score counter
+                        clearInterval(fuelInterval); // Stop the fuel counter
+                        restartButton.style.display = 'block'; // Show restart button
+                        crashSound.play(); // Play crash sound
+                        // Update high score
+                        if (score > highScore) {
+                            highScore = score;
+                            highScoreElement.textContent = `High Score: ${highScore}`;
+                        }
+                        return;
+                    }
                 }
             }, 1000);
         }
