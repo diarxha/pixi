@@ -8,37 +8,55 @@
         body {
             margin: 0;
             overflow: hidden;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 100vh;
+            background-color: #000;
+        }
+        #left-panel, #right-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            padding: 75px;
+            margin: 20px;
+            box-sizing: border-box;
+        }
+        #left-panel {
+            width: 200px;
+        }
+        #right-panel {
+            width: 200px;
+        }
+        #game-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 800px; /* Adjust as needed */
+            height: 1000px; /* Adjust as needed */
         }
         canvas {
-            background-color: #333333; /* Added background color to the canvas */
+            background-color: #333333;
         }
         @font-face {
             font-family: myFont;
             src: url(/font/TechnoRaceItalic-eZRWe.otf);
         }
-        #score, #highScore, #fuelGauge {
-            position: absolute;
-            top: 3px;
+        #score, #highScore, #fuelGauge, #shieldStatus {
             font-family: myFont;
             font-size: 24px;
             color: white;
             background-color: rgba(0, 0, 0, 0.7);
             padding: 10px;
             border-radius: 5px;
-            right: 50%;
-        }
-        #highScore {
-            top: 50px;
-            right: 50%;
-        }
-        #fuelGauge {
-            top: 97px;
-            right: 50%;
+            margin-bottom: 10px;
+            width: 100%;
+            text-align: center;
         }
         #start, #restart {
             font-family: myFont;
-            position: absolute;
-            right: 50%;
             font-size: 20px;
             padding: 10px 20px;
             background-color: #4CAF50;
@@ -46,38 +64,47 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
-        }
-        #start {
-            top: 150px;
-        }
-        #restart {
-            top: 192px;
-            display: none;
+            margin-bottom: 10px;
         }
         #speedSlider {
-            position: absolute;
-            right: 47%;
-            top: 234px;
             width: 200px;
+            margin-top: 10px;
+        }
+        #lastGames {
+            font-family: myFont;
+            font-size: 20px;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
-    <div id="score">Score: 0</div>
-    <div id="highScore">High Score: 0</div>
-    <div id="fuelGauge">Fuel: 100%</div>
-    <button id="start" onclick="startGame()">Start Game</button>
-    <button id="restart" onclick="restartGame()" style="display:none;">Restart</button>
-    <input type="range" id="speedSlider" min="1" max="10" value="5" oninput="updateSpeed()">
+    <div id="left-panel">
+        <div id="highScore">High Score: 0</div>
+        <div id="score">Score: 0</div>
+        <div id="fuelGauge">Fuel: 100%</div>
+        <div id="shieldStatus">Shield: Inactive</div>
+    </div>
+    <div id="game-container"></div>
+    <div id="right-panel">
+        <button id="start" onclick="startGame()">Start Game</button>
+        <button id="restart" onclick="restartGame()" style="display:none;">Restart</button>
+        <input type="range" id="speedSlider" min="1" max="10" value="5" oninput="updateSpeed()">
+        <div id="lastGames">Last 10 Games:<br>0, 0, 0, 0, 0, 0, 0, 0, 0, 0</div>
+    </div>
     <audio id="backgroundMusic" src="/audio/bgmusic.mp3" loop></audio>
     <audio id="crashSound" src="audio/crash-sound.mp3"></audio>
+    <audio id="shieldSound" src="audio/shield-sound.mp3"></audio>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.2.1/pixi.min.js"></script>
     <script>
-        let app, car, enemyCars = [], fuelCanisters = [], gameActive = false, score = 0, highScore = 0, fuel = 100, scoreElement, highScoreElement, fuelGaugeElement, startButton, restartButton, speedSlider, backgroundMusic, crashSound, speedMultiplier = 1, carSpeed = 5;
+        let app, car, enemyCars = [], fuelCanisters = [], shields = [], gameActive = false, score = 0, highScore = 0, fuel = 100, shieldActive = false, scoreElement, highScoreElement, fuelGaugeElement, shieldStatusElement, startButton, restartButton, speedSlider, backgroundMusic, crashSound, shieldSound, speedMultiplier = 1, carSpeed = 5;
 
         function setup() {
             app = new PIXI.Application({ width: 800, height: 1000 });
-            document.body.appendChild(app.view);
+            document.getElementById('game-container').appendChild(app.view);
 
             // Draw the road
             const road = new PIXI.Graphics();
@@ -107,6 +134,7 @@
             const carTexture = PIXI.Texture.from('img/car.png');
             const car2Texture = PIXI.Texture.from('img/car2.png');
             const fuelTexture = PIXI.Texture.from('img/fuel.png'); // Load fuel image
+            const shieldTexture = PIXI.Texture.from('img/shield.png'); // Load shield image
 
             // Create the player car sprite
             car = new PIXI.Sprite(carTexture);
@@ -121,6 +149,9 @@
 
             // Array to hold the fuel canisters
             fuelCanisters = [];
+
+            // Array to hold the shields
+            shields = [];
 
             // Function to spawn enemy cars
             function spawnEnemyCar() {
@@ -140,12 +171,25 @@
                 if (!gameActive) return;
                 const lane = Math.floor(Math.random() * 4); // Random lane (0 to 3)
                 const fuelCanister = new PIXI.Sprite(fuelTexture);
-                fuelCanister.width = 50;
-                fuelCanister.height = 50;
+                fuelCanister.width = 75;
+                fuelCanister.height = 75;
                 fuelCanister.x = startX + lane * laneWidth + (laneWidth - fuelCanister.width) / 2; // Center in lane
                 fuelCanister.y = -fuelCanister.height; // Start above the screen
                 app.stage.addChild(fuelCanister);
                 fuelCanisters.push(fuelCanister);
+            }
+
+            // Function to spawn shields
+            function spawnShield() {
+                if (!gameActive) return;
+                const lane = Math.floor(Math.random() * 4); // Random lane (0 to 3)
+                const shield = new PIXI.Sprite(shieldTexture);
+                shield.width = 120;
+                shield.height = 120;
+                shield.x = startX + lane * laneWidth + (laneWidth - shield.width) / 2; // Center in lane
+                shield.y = -shield.height; // Start above the screen
+                app.stage.addChild(shield);
+                shields.push(shield);
             }
 
             // Spawn enemy cars at random intervals
@@ -153,6 +197,9 @@
 
             // Spawn fuel canisters at random intervals
             setInterval(spawnFuelCanister, 5000); // Spawn every 5 seconds
+
+            // Spawn shields at random intervals
+            setInterval(spawnShield, 15000); // Spawn every 15 seconds
 
             // Keyboard controls
             const keys = {};
@@ -211,18 +258,26 @@
                         app.stage.removeChild(enemyCar); // Remove from stage
                         enemyCars.splice(i, 1); // Remove from array
                     } else if (checkCollision(car, enemyCar)) {
-                        gameActive = false; // Stop the game
-                        backgroundMusic.pause(); // Stop the background music
-                        crashSound.play(); // Play crash sound
-                        clearInterval(scoreInterval); // Stop the score counter
-                        clearInterval(fuelInterval); // Stop the fuel counter
-                        restartButton.style.display = 'block'; // Show restart button
-                        // Update high score
-                        if (score > highScore) {
-                            highScore = score;
-                            highScoreElement.textContent = `High Score: ${highScore}`;
+                        if (shieldActive) {
+                            shieldActive = false; // Deactivate shield on collision
+                            shieldStatusElement.textContent = 'Shield: Inactive';
+                            app.stage.removeChild(enemyCar); // Remove from stage
+                            enemyCars.splice(i, 1); // Remove from array
+                        } else {
+                            gameActive = false; // Stop the game
+                            backgroundMusic.pause(); // Stop the background music
+                            crashSound.play(); // Play crash sound
+                            clearInterval(scoreInterval); // Stop the score counter
+                            clearInterval(fuelInterval); // Stop the fuel counter
+                            restartButton.style.display = 'block'; // Show restart button
+                            // Update high score
+                            if (score > highScore) {
+                                highScore = score;
+                                highScoreElement.textContent = `High Score: ${highScore}`;
+                            }
+                            updateLastGames(score); // Update the last games record
+                            return;
                         }
-                        return;
                     }
                 }
 
@@ -238,6 +293,22 @@
                         fuelCanisters.splice(i, 1); // Remove from array
                         fuel = Math.min(100, fuel + 20); // Increase fuel, max 100%
                         fuelGaugeElement.textContent = `Fuel: ${fuel}%`;
+                    }
+                }
+
+                // Move shields
+                for (let i = shields.length - 1; i >= 0; i--) {
+                    const shield = shields[i];
+                    shield.y += 5 * speedMultiplier; // Move down with speed multiplier
+                    if (shield.y > app.screen.height) {
+                        app.stage.removeChild(shield); // Remove from stage
+                        shields.splice(i, 1); // Remove from array
+                    } else if (checkCollision(car, shield)) {
+                        app.stage.removeChild(shield); // Remove from stage
+                        shields.splice(i, 1); // Remove from array
+                        shieldActive = true; // Activate shield
+                        shieldSound.play(); // Play shield sound
+                        shieldStatusElement.textContent = 'Shield: Active';
                     }
                 }
 
@@ -261,11 +332,13 @@
             scoreElement = document.getElementById('score');
             highScoreElement = document.getElementById('highScore');
             fuelGaugeElement = document.getElementById('fuelGauge');
+            shieldStatusElement = document.getElementById('shieldStatus');
             startButton = document.getElementById('start');
             restartButton = document.getElementById('restart');
             speedSlider = document.getElementById('speedSlider'); // Get the speed slider element
             backgroundMusic = document.getElementById('backgroundMusic'); // Get the background music audio element
             crashSound = document.getElementById('crashSound'); // Get the crash sound audio element
+            shieldSound = document.getElementById('shieldSound'); // Get the shield sound audio element
             setup();
         }
 
@@ -279,9 +352,11 @@
             gameActive = true;
             score = 0;
             fuel = 100; // Reset fuel at the start of the game
+            shieldActive = false; // Reset shield status at the start of the game
             speedMultiplier = 1; // Reset speed multiplier at the start of the game
             scoreElement.textContent = `Score: ${score}`;
             fuelGaugeElement.textContent = `Fuel: ${fuel}%`;
+            shieldStatusElement.textContent = 'Shield: Inactive';
             startButton.style.display = 'none';
             restartButton.style.display = 'none';
 
@@ -315,6 +390,7 @@
                             highScore = score;
                             highScoreElement.textContent = `High Score: ${highScore}`;
                         }
+                        updateLastGames(score); // Update the last games record
                         return;
                     }
                 }
@@ -326,9 +402,11 @@
             gameActive = true;
             score = 0;
             fuel = 100; // Reset fuel on restart
+            shieldActive = false; // Reset shield status on restart
             speedMultiplier = 1; // Reset speed multiplier on restart
             scoreElement.textContent = `Score: ${score}`;
             fuelGaugeElement.textContent = `Fuel: ${fuel}%`;
+            shieldStatusElement.textContent = 'Shield: Inactive';
             restartButton.style.display = 'none';
 
             // Remove existing enemy cars
@@ -338,6 +416,10 @@
             // Remove existing fuel canisters
             fuelCanisters.forEach(fuelCanister => app.stage.removeChild(fuelCanister));
             fuelCanisters = [];
+
+            // Remove existing shields
+            shields.forEach(shield => app.stage.removeChild(shield));
+            shields = [];
 
             // Reset player car position
             car.x = app.screen.width / 2 - car.width / 2;
@@ -373,10 +455,22 @@
                             highScore = score;
                             highScoreElement.textContent = `High Score: ${highScore}`;
                         }
+                        updateLastGames(score); // Update the last games record
                         return;
                     }
                 }
             }, 1000);
+        }
+
+        // Function to update the last 10 games record
+        function updateLastGames(score) {
+            const lastGamesElement = document.getElementById('lastGames');
+            let lastGames = lastGamesElement.textContent.replace('Last 10 Games:', '').trim().split(',').map(Number);
+            if (lastGames.length >= 10) {
+                lastGames.shift(); // Remove the oldest score
+            }
+            lastGames.push(score); // Add the new score
+            lastGamesElement.textContent = 'Last 10 Games: ' + lastGames.join(', ');
         }
     </script>
 </body>
