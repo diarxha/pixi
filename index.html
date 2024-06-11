@@ -73,7 +73,7 @@
     <audio id="crashSound" src="audio/crash-sound.mp3"></audio>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.2.1/pixi.min.js"></script>
     <script>
-        let app, car, enemyCars = [], fuelCanisters = [], gameActive = false, score = 0, highScore = 0, fuel = 100, scoreElement, highScoreElement, fuelGaugeElement, startButton, restartButton, speedSlider, backgroundMusic, crashSound, speedMultiplier = 1, carSpeed = 5;
+        let app, car, enemyCars = [], fuelCanisters = [], shields = [], gameActive = false, score = 0, highScore = 0, fuel = 100, scoreElement, highScoreElement, fuelGaugeElement, startButton, restartButton, speedSlider, backgroundMusic, crashSound, speedMultiplier = 1, carSpeed = 5, shieldActive = false, shieldEffect, shieldEffectTimeout;
 
         function setup() {
             app = new PIXI.Application({ width: 800, height: 1000 });
@@ -107,6 +107,15 @@
             const carTexture = PIXI.Texture.from('img/car.png');
             const car2Texture = PIXI.Texture.from('img/car2.png');
             const fuelTexture = PIXI.Texture.from('img/fuel.png'); // Load fuel image
+            const shieldTexture = PIXI.Texture.from('img/shield.png'); // Load shield image
+            const shieldEffectTexture = PIXI.Texture.from('img/shieldeffect.png'); // Load shield effect image
+
+            // Create the shield effect sprite but do not add to stage yet
+            shieldEffect = new PIXI.Sprite(shieldEffectTexture);
+            shieldEffect.width = 150;
+            shieldEffect.height = 150;
+            shieldEffect.visible = false; // Initially hidden
+            app.stage.addChild(shieldEffect);
 
             // Create the player car sprite
             car = new PIXI.Sprite(carTexture);
@@ -121,6 +130,9 @@
 
             // Array to hold the fuel canisters
             fuelCanisters = [];
+
+            // Array to hold the shields
+            shields = [];
 
             // Function to spawn enemy cars
             function spawnEnemyCar() {
@@ -148,11 +160,27 @@
                 fuelCanisters.push(fuelCanister);
             }
 
+            // Function to spawn shields
+            function spawnShield() {
+                if (!gameActive) return;
+                const lane = Math.floor(Math.random() * 4); // Random lane (0 to 3)
+                const shield = new PIXI.Sprite(shieldTexture);
+                shield.width = 50;
+                shield.height = 50;
+                shield.x = startX + lane * laneWidth + (laneWidth - shield.width) / 2; // Center in lane
+                shield.y = -shield.height; // Start above the screen
+                app.stage.addChild(shield);
+                shields.push(shield);
+            }
+
             // Spawn enemy cars at random intervals
             setInterval(spawnEnemyCar, 1000); // Spawn every second
 
             // Spawn fuel canisters at random intervals
             setInterval(spawnFuelCanister, 5000); // Spawn every 5 seconds
+
+            // Spawn shields at regular intervals
+            setInterval(spawnShield, 30000); // Spawn every 30 seconds
 
             // Keyboard controls
             const keys = {};
@@ -210,7 +238,7 @@
                     if (enemyCar.y > app.screen.height) {
                         app.stage.removeChild(enemyCar); // Remove from stage
                         enemyCars.splice(i, 1); // Remove from array
-                    } else if (checkCollision(car, enemyCar)) {
+                    } else if (checkCollision(car, enemyCar) && !shieldActive) {
                         gameActive = false; // Stop the game
                         backgroundMusic.pause(); // Stop the background music
                         crashSound.play(); // Play crash sound
@@ -241,6 +269,20 @@
                     }
                 }
 
+                // Move shields
+                for (let i = shields.length - 1; i >= 0; i--) {
+                    const shield = shields[i];
+                    shield.y += 5 * speedMultiplier; // Move down with speed multiplier
+                    if (shield.y > app.screen.height) {
+                        app.stage.removeChild(shield); // Remove from stage
+                        shields.splice(i, 1); // Remove from array
+                    } else if (checkCollision(car, shield)) {
+                        app.stage.removeChild(shield); // Remove from stage
+                        shields.splice(i, 1); // Remove from array
+                        activateShield();
+                    }
+                }
+
                 // Adjust speed multiplier based on score
                 if (score >= 100) {
                     speedMultiplier = 1 + ((score - 100) / 500) * 0.5 + 0.5;
@@ -253,7 +295,25 @@
                 if (laneMarkings.y > 40) {
                     laneMarkings.y = 0;
                 }
+
+                // Position shield effect under the car
+                if (shieldActive) {
+                    shieldEffect.x = car.x;
+                    shieldEffect.y = car.y;
+                }
             });
+        }
+
+        // Function to activate shield effect
+        function activateShield() {
+            shieldActive = true;
+            shieldEffect.visible = true;
+
+            // Remove shield effect after 7 seconds
+            shieldEffectTimeout = setTimeout(() => {
+                shieldActive = false;
+                shieldEffect.visible = false;
+            }, 7000);
         }
 
         // Initialize game
@@ -338,6 +398,10 @@
             // Remove existing fuel canisters
             fuelCanisters.forEach(fuelCanister => app.stage.removeChild(fuelCanister));
             fuelCanisters = [];
+
+            // Remove existing shields
+            shields.forEach(shield => app.stage.removeChild(shield));
+            shields = [];
 
             // Reset player car position
             car.x = app.screen.width / 2 - car.width / 2;
