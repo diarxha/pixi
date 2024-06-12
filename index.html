@@ -34,8 +34,8 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            width: 800px; /* Adjust as needed */
-            height: 1000px; /* Adjust as needed */
+            width: 800px;
+            height: 1000px;
         }
         canvas {
             background-color: #333333;
@@ -106,102 +106,84 @@
             app = new PIXI.Application({ width: 800, height: 1000 });
             document.getElementById('game-container').appendChild(app.view);
 
-            // Draw the road
             const road = new PIXI.Graphics();
-            road.beginFill(0x333333); // Road color
-            road.drawRect(100, 0, 600, 1000); // Adjusted road dimensions
+            road.beginFill(0x333333);
+            road.drawRect(100, 0, 600, 1000);
             road.endFill();
-            app.stage.addChild(road); // Add road to the stage first
+            app.stage.addChild(road);
 
-            // Draw the lane markings
             const laneMarkings = new PIXI.Graphics();
             laneMarkings.lineStyle(4, 0xFFFFFF, 1);
-
-            // Calculate lane width and positions
-            const laneWidth = 600 / 4; // Four lanes
+            const laneWidth = 600 / 4;
             const startX = 100;
-
-            // Draw lane markings for four lanes
-            for (let i = 0; i < 1000; i += 40) { // Adjusted loop to match new height
-                for (let j = 1; j < 4; j++) { // Three lines to separate four lanes
+            for (let i = 0; i < 1000; i += 40) {
+                for (let j = 1; j < 4; j++) {
                     laneMarkings.moveTo(startX + j * laneWidth, i);
                     laneMarkings.lineTo(startX + j * laneWidth, i + 20);
                 }
             }
-            app.stage.addChild(laneMarkings); // Add lane markings to the stage
+            app.stage.addChild(laneMarkings);
 
-            // Load the car images
             const carTexture = PIXI.Texture.from('img/car.png');
             const car2Texture = PIXI.Texture.from('img/car2.png');
-            const fuelTexture = PIXI.Texture.from('img/fuel.png'); // Load fuel image
-            const shieldTexture = PIXI.Texture.from('img/shield.png'); // Load shield image
+            const fuelTexture = PIXI.Texture.from('img/fuel.png');
+            const shieldTexture = PIXI.Texture.from('img/shield.png');
 
-            // Create the player car sprite
             car = new PIXI.Sprite(carTexture);
             car.width = 150;
             car.height = 150;
-            car.x = app.screen.width / 2 - car.width / 2; // Center horizontally
-            car.y = app.screen.height - car.height - 50; // Position in the lower half
+            car.x = app.screen.width / 2 - car.width / 2;
+            car.y = app.screen.height - car.height - 50;
             app.stage.addChild(car);
 
-            // Create the shield effect sprite
             shieldEffect = new PIXI.Sprite(shieldTexture);
             shieldEffect.width = car.width + 20;
             shieldEffect.height = car.height + 20;
             shieldEffect.x = car.x - 10;
             shieldEffect.y = car.y - 10;
-            shieldEffect.visible = false; // Initially hidden
+            shieldEffect.visible = false;
             app.stage.addChild(shieldEffect);
 
-            // Function to spawn enemy cars
             function spawnEnemyCar() {
                 if (!gameActive) return;
-                const lane = Math.floor(Math.random() * 4); // Random lane (0 to 3)
+                const lane = Math.floor(Math.random() * 4);
                 const enemyCar = new PIXI.Sprite(car2Texture);
                 enemyCar.width = 150;
                 enemyCar.height = 150;
-                enemyCar.x = startX + lane * laneWidth + (laneWidth - enemyCar.width) / 2; // Center in lane
-                enemyCar.y = -enemyCar.height; // Start above the screen
+                enemyCar.x = startX + lane * laneWidth + (laneWidth - enemyCar.width) / 2;
+                enemyCar.y = -enemyCar.height;
                 app.stage.addChild(enemyCar);
                 enemyCars.push(enemyCar);
             }
 
-            // Function to spawn fuel canisters
             function spawnFuelCanister() {
                 if (!gameActive) return;
-                const lane = Math.floor(Math.random() * 4); // Random lane (0 to 3)
+                const lane = Math.floor(Math.random() * 4);
                 const fuelCanister = new PIXI.Sprite(fuelTexture);
                 fuelCanister.width = 75;
                 fuelCanister.height = 75;
-                fuelCanister.x = startX + lane * laneWidth + (laneWidth - fuelCanister.width) / 2; // Center in lane
-                fuelCanister.y = -fuelCanister.height; // Start above the screen
+                fuelCanister.x = startX + lane * laneWidth + (laneWidth - fuelCanister.width) / 2;
+                fuelCanister.y = -fuelCanister.height;
                 app.stage.addChild(fuelCanister);
                 fuelCanisters.push(fuelCanister);
             }
 
-            // Function to spawn shield power-ups
             function spawnShield() {
                 if (!gameActive) return;
-                const lane = Math.floor(Math.random() * 4); // Random lane (0 to 3)
+                const lane = Math.floor(Math.random() * 4);
                 const shield = new PIXI.Sprite(shieldTexture);
                 shield.width = 75;
                 shield.height = 75;
-                shield.x = startX + lane * laneWidth + (laneWidth - shield.width) / 2; // Center in lane
-                shield.y = -shield.height; // Start above the screen
+                shield.x = startX + lane * laneWidth + (laneWidth - shield.width) / 2;
+                shield.y = -shield.height;
                 app.stage.addChild(shield);
                 shields.push(shield);
             }
 
-            // Spawn enemy cars at random intervals
-            setInterval(spawnEnemyCar, 1000); // Spawn every second
+            setInterval(spawnEnemyCar, 1000);
+            setInterval(spawnFuelCanister, 5000);
+            setInterval(spawnShield, 7000);
 
-            // Spawn fuel canisters at random intervals
-            setInterval(spawnFuelCanister, 5000); // Spawn every 5 seconds
-
-            // Spawn shields at random intervals
-            setInterval(spawnShield, 7000); // Spawn every 7 seconds
-
-            // Keyboard controls
             const keys = {};
             window.addEventListener('keydown', (e) => {
                 keys[e.code] = true;
@@ -210,70 +192,63 @@
                 keys[e.code] = false;
             });
 
-            // Collision detection function
             function checkCollision(rect1, rect2) {
-                const horizontalPadding = 40; // Adjust horizontal padding
-                const verticalPadding = 7; // Adjust vertical padding
+                const horizontalPadding = 40;
+                const verticalPadding = 7;
                 return rect1.x + horizontalPadding < rect2.x + rect2.width - horizontalPadding &&
                     rect1.x + rect1.width - horizontalPadding > rect2.x + horizontalPadding &&
                     rect1.y + verticalPadding < rect2.y + rect2.height - verticalPadding &&
                     rect1.y + rect1.height - verticalPadding > rect2.y + verticalPadding;
             }
 
-            // Game loop
             app.ticker.add(() => {
                 if (!gameActive) return;
-
-                // Move player car
                 if (keys['ArrowLeft'] || keys['KeyA']) {
                     car.x -= carSpeed;
                     if (car.x < 100) {
-                        car.x = 100; // Keep the car within the left boundary
+                        car.x = 100;
                     }
                 }
                 if (keys['ArrowRight'] || keys['KeyD']) {
                     car.x += carSpeed;
                     if (car.x > app.screen.width - car.width - 100) {
-                        car.x = app.screen.width - car.width - 100; // Keep the car within the right boundary
+                        car.x = app.screen.width - car.width - 100;
                     }
                 }
                 if (keys['ArrowUp'] || keys['KeyW']) {
                     car.y -= carSpeed;
                     if (car.y < 0) {
-                        car.y = 0; // Keep the car within the upper boundary
+                        car.y = 0;
                     }
                 }
                 if (keys['ArrowDown'] || keys['KeyS']) {
                     car.y += carSpeed;
                     if (car.y > app.screen.height - car.height) {
-                        car.y = app.screen.height - car.height; // Keep the car within the lower boundary
+                        car.y = app.screen.height - car.height;
                     }
                 }
 
-                // Move enemy cars
                 for (let i = enemyCars.length - 1; i >= 0; i--) {
                     const enemyCar = enemyCars[i];
-                    enemyCar.y += 5 * speedMultiplier; // Move down with speed multiplier
+                    enemyCar.y += 5 * speedMultiplier;
                     if (enemyCar.y > app.screen.height) {
-                        app.stage.removeChild(enemyCar); // Remove from stage
-                        enemyCars.splice(i, 1); // Remove from array
+                        app.stage.removeChild(enemyCar);
+                        enemyCars.splice(i, 1);
                     } else if (checkCollision(car, enemyCar)) {
                         if (shieldActive) {
-                            // Shield is active, destroy the enemy car
-                            app.stage.removeChild(enemyCar); // Remove from stage
-                            enemyCars.splice(i, 1); // Remove from array
-                            shieldActive = false; // Deactivate the shield
-                            shieldEffect.visible = false; // Hide the shield effect
-                            clearTimeout(shieldEffectTimeout); // Clear the shield timeout
-                            shieldSound.play(); // Play shield sound effect
+                            app.stage.removeChild(enemyCar);
+                            enemyCars.splice(i, 1);
+                            shieldActive = false;
+                            shieldEffect.visible = false;
+                            clearTimeout(shieldEffectTimeout);
+                            shieldSound.play();
                         } else {
-                            gameActive = false; // Stop the game
-                            backgroundMusic.pause(); // Stop the background music
-                            crashSound.play(); // Play crash sound
-                            clearInterval(scoreInterval); // Stop the score counter
-                            clearInterval(fuelInterval); // Stop the fuel counter
-                            restartButton.style.display = 'block'; // Show restart button
-                            // Update high score
+                            gameActive = false;
+                            backgroundMusic.pause();
+                            crashSound.play();
+                            clearInterval(scoreInterval);
+                            clearInterval(fuelInterval);
+                            restartButton.style.display = 'block';
                             if (score > highScore) {
                                 highScore = score;
                                 highScoreElement.textContent = `High Score: ${highScore}`;
@@ -283,49 +258,44 @@
                     }
                 }
 
-                // Move fuel canisters
                 for (let i = fuelCanisters.length - 1; i >= 0; i--) {
                     const fuelCanister = fuelCanisters[i];
-                    fuelCanister.y += 5 * speedMultiplier; // Move down with speed multiplier
+                    fuelCanister.y += 5 * speedMultiplier;
                     if (fuelCanister.y > app.screen.height) {
-                        app.stage.removeChild(fuelCanister); // Remove from stage
-                        fuelCanisters.splice(i, 1); // Remove from array
+                        app.stage.removeChild(fuelCanister);
+                        fuelCanisters.splice(i, 1);
                     } else if (checkCollision(car, fuelCanister)) {
-                        app.stage.removeChild(fuelCanister); // Remove from stage
-                        fuelCanisters.splice(i, 1); // Remove from array
-                        fuel = Math.min(100, fuel + 20); // Increase fuel, max 100%
+                        app.stage.removeChild(fuelCanister);
+                        fuelCanisters.splice(i, 1);
+                        fuel = Math.min(100, fuel + 20);
                         fuelGaugeElement.textContent = `Fuel: ${fuel}%`;
                     }
                 }
 
-                // Move shields
                 for (let i = shields.length - 1; i >= 0; i--) {
                     const shield = shields[i];
-                    shield.y += 5 * speedMultiplier; // Move down with speed multiplier
+                    shield.y += 5 * speedMultiplier;
                     if (shield.y > app.screen.height) {
-                        app.stage.removeChild(shield); // Remove from stage
-                        shields.splice(i, 1); // Remove from array
+                        app.stage.removeChild(shield);
+                        shields.splice(i, 1);
                     } else if (checkCollision(car, shield)) {
-                        app.stage.removeChild(shield); // Remove from stage
-                        shields.splice(i, 1); // Remove from array
-                        activateShield(); // Activate shield effect
+                        app.stage.removeChild(shield);
+                        shields.splice(i, 1);
+                        activateShield();
                     }
                 }
 
-                // Adjust speed multiplier based on score
                 if (score >= 100) {
                     speedMultiplier = 1 + ((score - 100) / 500) * 0.5 + 0.5;
                 } else {
                     speedMultiplier = 1;
                 }
 
-                // Animate the lane markings to simulate a moving road
                 laneMarkings.y += 2 * speedMultiplier;
                 if (laneMarkings.y > 40) {
                     laneMarkings.y = 0;
                 }
 
-                // Position shield effect under the car
                 if (shieldActive) {
                     shieldEffect.x = car.x - 10;
                     shieldEffect.y = car.y - 10;
@@ -333,13 +303,11 @@
             });
         }
 
-        // Function to activate shield effect
         function activateShield() {
             shieldActive = true;
             shieldEffect.visible = true;
             shieldStatusElement.textContent = 'Shield: Active';
 
-            // Remove shield effect after 7 seconds
             shieldEffectTimeout = setTimeout(() => {
                 shieldActive = false;
                 shieldEffect.visible = false;
@@ -347,7 +315,6 @@
             }, 7000);
         }
 
-        // Initialize game
         window.onload = () => {
             scoreElement = document.getElementById('score');
             highScoreElement = document.getElementById('highScore');
@@ -355,141 +322,113 @@
             shieldStatusElement = document.getElementById('shieldStatus');
             startButton = document.getElementById('start');
             restartButton = document.getElementById('restart');
-            speedSlider = document.getElementById('speedSlider'); // Get the speed slider element
-            backgroundMusic = document.getElementById('backgroundMusic'); // Get the background music audio element
-            crashSound = document.getElementById('crashSound'); // Get the crash sound audio element
-            shieldSound = document.getElementById('shieldSound'); // Get the shield sound audio element
+            speedSlider = document.getElementById('speedSlider');
+            backgroundMusic = document.getElementById('backgroundMusic');
+            crashSound = document.getElementById('crashSound');
+            shieldSound = document.getElementById('shieldSound');
             setup();
         }
 
-        // Update car speed function
         function updateSpeed() {
             carSpeed = parseInt(speedSlider.value, 10);
         }
 
-        // Start game function
         function startGame() {
             gameActive = true;
             score = 0;
-            fuel = 100; // Reset fuel at the start of the game
-            shieldActive = false; // Reset shield status at the start of the game
-            speedMultiplier = 1; // Reset speed multiplier at the start of the game
+            fuel = 100;
+            shieldActive = false;
+            speedMultiplier = 1;
             scoreElement.textContent = `Score: ${score}`;
             fuelGaugeElement.textContent = `Fuel: ${fuel}%`;
             shieldStatusElement.textContent = 'Shield: Inactive';
             startButton.style.display = 'none';
             restartButton.style.display = 'none';
-
-            // Start the background music
             backgroundMusic.play();
-
-            // Start the score interval
             scoreInterval = setInterval(() => {
                 if (gameActive) {
                     score += 10;
                     scoreElement.textContent = `Score: ${score}`;
                 }
             }, 1000);
-
-            // Start the fuel interval
             fuelInterval = setInterval(() => {
                 if (gameActive) {
-                    // Decrease fuel by 2% per second until score reaches 500, then by 3% per second
                     const fuelDecrement = score < 500 ? 2 : 3;
                     fuel -= fuelDecrement;
                     fuelGaugeElement.textContent = `Fuel: ${fuel}%`;
                     if (fuel <= 0) {
                         gameActive = false;
-                        backgroundMusic.pause(); // Stop the background music
-                        clearInterval(scoreInterval); // Stop the score counter
-                        clearInterval(fuelInterval); // Stop the fuel counter
-                        restartButton.style.display = 'block'; // Show restart button
-                        crashSound.play(); // Play crash sound
-                        // Update high score
+                        backgroundMusic.pause();
+                        clearInterval(scoreInterval);
+                        clearInterval(fuelInterval);
+                        restartButton.style.display = 'block';
+                        crashSound.play();
                         if (score > highScore) {
                             highScore = score;
                             highScoreElement.textContent = `High Score: ${highScore}`;
                         }
-                        updateLastGames(score); // Update the last games record
+                        updateLastGames(score);
                         return;
                     }
                 }
             }, 1000);
         }
 
-        // Restart game function
         function restartGame() {
             gameActive = true;
             score = 0;
-            fuel = 100; // Reset fuel on restart
-            shieldActive = false; // Reset shield status on restart
-            speedMultiplier = 1; // Reset speed multiplier on restart
+            fuel = 100;
+            shieldActive = false;
+            speedMultiplier = 1;
             scoreElement.textContent = `Score: ${score}`;
             fuelGaugeElement.textContent = `Fuel: ${fuel}%`;
             shieldStatusElement.textContent = 'Shield: Inactive';
             restartButton.style.display = 'none';
-
-            // Remove existing enemy cars
             enemyCars.forEach(enemyCar => app.stage.removeChild(enemyCar));
             enemyCars = [];
-
-            // Remove existing fuel canisters
             fuelCanisters.forEach(fuelCanister => app.stage.removeChild(fuelCanister));
             fuelCanisters = [];
-
-            // Remove existing shields
             shields.forEach(shield => app.stage.removeChild(shield));
             shields = [];
-
-            // Reset player car position
             car.x = app.screen.width / 2 - car.width / 2;
             car.y = app.screen.height - car.height - 50;
-
-            // Start the background music
             backgroundMusic.play();
-
-            // Start the score interval again
             scoreInterval = setInterval(() => {
                 if (gameActive) {
                     score += 10;
                     scoreElement.textContent = `Score: ${score}`;
                 }
             }, 1000);
-
-            // Start the fuel interval again
             fuelInterval = setInterval(() => {
                 if (gameActive) {
-                    // Decrease fuel by 2% per second until score reaches 500, then by 3% per second
                     const fuelDecrement = score < 500 ? 2 : 3;
                     fuel -= fuelDecrement;
                     fuelGaugeElement.textContent = `Fuel: ${fuel}%`;
                     if (fuel <= 0) {
                         gameActive = false;
-                        backgroundMusic.pause(); // Stop the background music
-                        clearInterval(scoreInterval); // Stop the score counter
-                        clearInterval(fuelInterval); // Stop the fuel counter
-                        restartButton.style.display = 'block'; // Show restart button
-                        crashSound.play(); // Play crash sound
-                        // Update high score
+                        backgroundMusic.pause();
+                        clearInterval(scoreInterval);
+                        clearInterval(fuelInterval);
+                        restartButton.style.display = 'block';
+                        crashSound.play();
                         if (score > highScore) {
                             highScore = score;
                             highScoreElement.textContent = `High Score: ${highScore}`;
                         }
-                        updateLastGames(score); // Update the last games record
+                        updateLastGames(score);
                         return;
                     }
                 }
             }, 1000);
         }
 
-        // Function to update the last 10 games record
         function updateLastGames(score) {
             const lastGamesElement = document.getElementById('lastGames');
             let lastGames = lastGamesElement.textContent.replace('Last 10 Games:', '').trim().split(',').map(Number);
             if (lastGames.length >= 10) {
-                lastGames.shift(); // Remove the oldest score
+                lastGames.shift();
             }
-            lastGames.push(score); // Add the new score
+            lastGames.push(score);
             lastGamesElement.textContent = 'Last 10 Games: ' + lastGames.join(', ');
         }
     </script>
